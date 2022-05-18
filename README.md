@@ -125,7 +125,7 @@ docker run -d \
   -p 8232:8232/tcp \
   -v $(pwd)/conf/magi.conf:/magi/conf/magi.conf:ro \
   -v $(pwd)/data:/magi/data \
-  magi-chain:64
+  magi-build:64
 ```
 OR
 ```
@@ -135,7 +135,7 @@ docker run -d \
   -p 8232:8232/tcp \
   -v $(pwd)/conf/magi.conf:/magi/conf/magi.conf:ro \
   -v $(pwd)/data/wallet.dat:/magi/data/wallet.dat \
-  magi-chain:64
+  magi-build:64
 ```
   **NOTE**: No local chain to reduce disk usage. Run risk of removing chain my accident if container were removed however a more efficient docker run method.
 
