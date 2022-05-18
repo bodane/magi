@@ -1,0 +1,30 @@
+# builds fine but does not run.
+FROM debian:jessie as build
+
+# Default build is for i386, amd64. Update "ARCH" for other architectures such as xCPUARCH=armv6l or xCPUARCH=armv7l if required.
+ARG ARCH=""
+
+RUN apt-get -qq update \
+  && apt-get -qq --no-install-recommends install build-essential libtool autotools-dev autoconf automake libssl-dev libgmp-dev libboost-all-dev libdb-dev libdb5.3++-dev libminiupnpc-dev
+
+WORKDIR /magi
+
+COPY . .
+
+RUN cd src && make -f makefile.unix ${ARCH}
+
+FROM alpine:latest as container
+
+WORKDIR /root/
+
+COPY --from=build /magi/* ./
+
+RUN mkdir data conf
+
+ENV DATA_DIR data
+ENV CONF conf/magi.conf
+
+EXPOSE 8232
+EXPOSE 8233
+
+CMD magid -conf=$CONF -datadir=$DATA_DIR
