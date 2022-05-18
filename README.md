@@ -74,6 +74,111 @@ If you are just starting to explore magi, or upgrading wallet from versions prio
 
 - Linux: unpack the files and run the wallet directly. 
 
+Docker
+---------------------
+The Dockerfile allows for anyone to create and use their own compiled from source Magi Socker image for any architecture - refer to Dockerfile comments.
+This allows you to easily deploy a Docker magi image on any host operating system that supports Docker.
+
+Below is a simple approach to create a basic docker image without `magi.conf`, `wallet.dat` or chain data. These files can be brought in when the container is created for flexilibity to reduce the need for a new docker image each time a change is made.
+
+Before proceeding [install Docker](https://docs.docker.com/get-docker/) for your host operating system.
+
+### Linux / MAC-OSX
+
+1. Create your docker image.
+
+  - Clone repo on host which will be compile and build the Docker image.
+  - Update Dockerfile `ARG ARCH=""` with appropriate architecture, then build image:
+
+```
+cd magi
+DOCKER_BUILDKIT=1 docker build -t magi-build:64 .
+```
+
+  **NOTE**: Replace `magi-build:64` with your preferred image name and tag.
+
+2. Prepare magi files which the docker container will read upon start.
+
+`cd .. && mkdir -p docker-magi/data docker-magi/conf && cd docker-magi`
+
+  **NOTE**: We're creating local paths which will contain your magi.conf, wallet and chain data (optional to make your daemon run immediately for wallet or mining use).
+
+3. Copy your magi.conf, wallet (optional) and chain data (optional) as appropriate.
+
+  - Copy your already setup `magi.conf` file in the created `conf` directory, in this case it is `docker-magi/conf`.
+  - Copy your your existing wallet (optional), chain data (optional) into the created `data` directory, in this case it is `docker-magi/data`. Not placing one here will mean a new wallet is created. This also applies to the chain data, if not copied here it will be synced inside container only.
+
+```
+$ ls conf
+magi.conf
+
+$ ls data
+blocks  database  wallet.dat
+```
+
+4. Now run your Magi container.
+
+```
+docker run -d \
+  --name magid \
+  -p 8233:8233/tcp \
+  -p 8232:8232/tcp \
+  -v $(pwd)/conf/magi.conf:/magi/conf/magi.conf:ro \
+  -v $(pwd)/data:/magi/data \
+  magi-chain:64
+```
+OR
+```
+docker run -d \
+  --name magid \
+  -p 8233:8233/tcp \
+  -p 8232:8232/tcp \
+  -v $(pwd)/conf/magi.conf:/magi/conf/magi.conf:ro \
+  -v $(pwd)/data/wallet.dat:/magi/data/wallet.dat \
+  magi-chain:64
+```
+  **NOTE**: No local chain to reduce disk usage. Run risk of removing chain my accident if container were removed however a more efficient docker run method.
+
+5. Test the Magid process works
+
+```
+$ docker exec magid magid -rpcuser=x -rpcpassword=x getinfo
+{
+    "version" : "v1.4.6.2",
+    "protocolversion" : 71065,
+    "walletversion" : 60000,
+    "balance" : 0.00000000,
+    "newmint" : 0.00000000,
+    "stake" : 0.00000000,
+    "blocks" : 3472784,
+    "timeoffset" : -1,
+    "moneysupply" : 15765186.82457296,
+    "connections" : 40,
+    "proxy" : "",
+    "ip" : "121.214.243.111",
+    "ipv4" : "121.214.243.111",
+    "ipv6" : "121.214.243.111",
+    "difficulty" : {
+        "proof-of-work" : 0.77666509,
+        "proof-of-stake" : 0.00817296
+    },
+    "testnet" : false,
+    "keypoololdest" : 1523178499,
+    "keypoolsize" : 102,
+    "mininput" : 0.00000000,
+    "paytxfee" : 0.00010000,
+    "unlocked_until" : 1653717758,
+    "errors" : ""
+```
+
+***Other Considerations / Improvements***
+
+  - Environment variables can be added to the `Dockerfile` to not require the need for RPC credentials each time a command is run outside the docker container.
+  - Environment variables could be added to override `magi.conf` file configuration on `magid` start without editing the file. Need a fresh container to have a ENV value change take effect, therefore may not be preferred if frequent changes are needed.
+  - Other OS's such as Windows uses different bind mount volume syntax however all Linux instructions are valid for Windows use or other.
+  - Magid could be run in daemon mode to give flexibility when attaching to container.
+
+
 Info
 ---------------------
 - Website: http://www.m-core.org
