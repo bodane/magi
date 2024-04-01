@@ -73,3 +73,11 @@ m-wallet-linux*
 m-wallet-osx*
 m-wallet-win*
 m-wallet-static*
+
+# Docker runtime data folder
+data/blocks
+data/database
+data/.lock
+data/*.log
+data/*.dat
+data/*.conf
