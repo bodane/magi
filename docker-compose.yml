@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  daemon:
+    image: bodane/magi:1.4.6.2
+    environment:
+      - RPC_USER=${RPC_USER}
+      - RPC_PASSWORD=${RPC_PASSWORD}
+    volumes:
+      - ./data/magi.conf:/magi/data/magi.conf:ro
+      - ./data:/magi/data
+    ports:
+      - "8232:8232"
+      - "8233:8233"
