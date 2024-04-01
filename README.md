@@ -76,73 +76,129 @@ If you are just starting to explore magi, or upgrading wallet from versions prio
 
 Docker
 ---------------------
-The Dockerfile allows for anyone to create and use their own compiled from source Magi Socker image for any architecture - refer to Dockerfile comments.
-This allows you to easily deploy a Docker magi image on any host operating system that supports Docker.
-
-Below is a simple approach to create a basic docker image without `magi.conf`, `wallet.dat` or chain data. These files can be brought in when the container is created for flexilibity to reduce the need for a new docker image each time a change is made.
+Docker allows you to easily deploy a Docker magi image on any host operating system that supports Docker.
 
 Before proceeding [install Docker](https://docs.docker.com/get-docker/) for your host operating system.
 
-### Linux / MAC-OSX
+**NOTE:** To allow for easy access to magi files while using Docker, bind mount volumes are used in this guide. If wanting to isolate the environment however ensure data persistenance with named or anonymous volumes, that particular configuration is outside the scope of this guide.
 
-1. Create your docker image.
+### Linux / MAC-OSX / Windows
 
-  - Clone repo on host which will be compile and build the Docker image.
+1. Create your docker image. **<- Skip to Step 2 presently as the compile process is not working - see attempted code in `Dockerfile_compile` if wanting to build from source. The `Dockerfile` contained in this repo is ingesting the offical binary directly to keep this setup straightforward.**
+
+  - Clone repo on host which will compile and build the Docker image.
   - Update Dockerfile `ARG ARCH=""` with appropriate architecture, then build image:
 
+    **Linux / MAC-OSX**
+    
+    ```
+    cd magi
+    DOCKER_BUILDKIT=1 docker build -t magi-build .
+    ```
+
+    **Windows**
+    ```
+    cd magi
+    docker build -t magi-build .
+    ```
+
+    **NOTE**: Replace `magi-build:tag` with your preferred image name and tag.
+
+2. If not already downloaded, clone this repository.
+
+  - Enter the `magi` directory and edit file `.env` with your own RPC username and password. This will need to match your `magi.conf` referred to in the next step. If this is a new setup, create a your username and set a random password - you don't need to remember this.
+
+    ```
+    RPC_USER=changeme-to-match-your-magi-conf
+    RPC_PASSWORD=changeme-to-match-your-magi-conf
+    ```
+
+    **IMPORTANT:** Treat the `.env` file as you would your `magi.conf` file and do not share your credentials.
+
+3. Copy your magi.conf, wallet (optional) and chain data (optional) as appropriate in their respective folders:
+
+  - Copy your already setup `magi.conf` file into the `data` directory.
+    
+    - If needing a copy of `magi.conf`, you can source it from the official repo here: (https://github.com/m-pays/magi/releases/latest). You may wish to update the `magi.conf` node list to ensure you have the most up-to-date node list. See the [nodes](https://discord.com/channels/654322830737145901/655513985633746944) channel on the official magi discord server for details.
+
+  - If you wish to restore your existing `wallet.dat` (optional), and chain data (optional) into the `data` directory, ensure you place all files in the `data` folder. **Ensure at a minimum `magi.conf` exists before proceeding to the next steps**
+
+      **NOTE:** Not placing any files in the `data` folder will mean a new wallet is created and chain data will be synced from a height of 0.
+
+  **Linux / MAC-OSX**
+
+  ```
+  $ ls data
+  blocks  database  wallet.dat magi.conf
+  ```
+
+  **Windows**
+
+  ```
+  C:\magi>dir DIR
+  Volume in drive C is DATA
+  Volume Serial Number is 1895-5A31
+
+  Directory of c:\magi\data
+
+  04/01/2024  05:56 PM    <DIR>          .
+  04/01/2024  05:56 PM    <DIR>          ..
+  03/27/2024  01:25 AM    <DIR>          blocks
+  03/27/2024  01:25 AM    <DIR>          database
+  03/27/2024  01:13 AM               903 magi.conf
+  04/01/2024  04:41 PM            77,824 wallet.dat
+                2 File(s)      4,998,074 bytes
+                2 Dir(s)  754,317,275,136 bytes free
+  ```
+
+4. Now run your Magi container! :)
+
+### Recommended easy way to start `magid` in a container
+
+From past steps your current base directory will be the `magi` directory. Ensure this is the case before proceeding with the below commands:
+
 ```
-cd magi
-DOCKER_BUILDKIT=1 docker build -t magi-build:64 .
+docker-compose up -d
 ```
 
-  **NOTE**: Replace `magi-build:64` with your preferred image name and tag.
+All done! :)
 
-2. Prepare magi files which the docker container will read upon start.
+Go to testing section below to confirm `magid` is working OK from the container.
 
-`cd .. && mkdir -p docker-magi/data docker-magi/conf && cd docker-magi`
+### Other methods  
+A more manual option is using the `docker run` command. You will however be required to enter RPC credentials during runtime as shown below.
 
-  **NOTE**: We're creating local paths which will contain your magi.conf, wallet and chain data (optional to make your daemon run immediately for wallet or mining use).
+**NOTE:** You may also modify the `docker-compose.yml` file if you so choose to do this. However it is zero touch configuration in it's current state.
 
-3. Copy your magi.conf, wallet (optional) and chain data (optional) as appropriate.
-
-  - Copy your already setup `magi.conf` file in the created `conf` directory, in this case it is `docker-magi/conf`.
-  - Copy your your existing wallet (optional), chain data (optional) into the created `data` directory, in this case it is `docker-magi/data`. Not placing one here will mean a new wallet is created. This also applies to the chain data, if not copied here it will be synced inside container only.
-
-```
-$ ls conf
-magi.conf
-
-$ ls data
-blocks  database  wallet.dat
-```
-
-4. Now run your Magi container.
+**Linux / MAC-OSX**
 
 ```
 docker run -d \
-  --name magid \
+  --name magi \
   -p 8233:8233/tcp \
   -p 8232:8232/tcp \
-  -v $(pwd)/conf/magi.conf:/magi/conf/magi.conf:ro \
+  -v $(pwd)/data/magi.conf:/magi/data/magi.conf:ro \
   -v $(pwd)/data:/magi/data \
-  magi-build:64
+  -e RPC_USER=changeme-to-match-your-magi-conf \
+  -e RPC_PASSWORD=change-to-match-your-magi-conf \
+  bodane/magi:1.4.6.2
 ```
-OR
-```
-docker run -d \
-  --name magid \
-  -p 8233:8233/tcp \
-  -p 8232:8232/tcp \
-  -v $(pwd)/conf/magi.conf:/magi/conf/magi.conf:ro \
-  -v $(pwd)/data/wallet.dat:/magi/data/wallet.dat \
-  magi-build:64
-```
-  **NOTE**: No local chain to reduce disk usage. Run risk of removing chain my accident if container were removed however a more efficient docker run method.
 
-5. Test the Magid process works
+**Windows**
 
 ```
-$ docker exec magid magid -rpcuser=x -rpcpassword=x getinfo
+docker run -d --name magi -e RPC_USER=changeme-to-match-your-magi-conf -e RPC_PASSWORD=changeme-to-match-your-magi-conf -v ${PWD}/data/magi.conf:/magi/data/magi.conf:ro -v ${PWD}/data:/magi/data bodane/magi:1.4.6.2
+```
+All done! :)
+
+Go to testing section below to confirm `magid` is working OK from the container.
+
+# Test magid is working inside docker
+
+If you used the recommended way via `docker-compose` the command will be as follows:
+
+```
+docker exec magi-daemon-1 magid -conf="/magi/data/magi.conf"  getinfo
 {
     "version" : "v1.4.6.2",
     "protocolversion" : 71065,
@@ -171,12 +227,40 @@ $ docker exec magid magid -rpcuser=x -rpcpassword=x getinfo
     "errors" : ""
 ```
 
-***Other Considerations / Improvements***
+If you used `docker run` to run the container.
+```
+$ docker exec magi magid -conf="/magi/data/magi.conf" getinfo
+{
+    "version" : "v1.4.6.2",
+    "protocolversion" : 71065,
+    "walletversion" : 60000,
+    "balance" : 0.00000000,
+    "newmint" : 0.00000000,
+    "stake" : 0.00000000,
+    "blocks" : 3472784,
+    "timeoffset" : -1,
+    "moneysupply" : 15765186.82457296,
+    "connections" : 40,
+    "proxy" : "",
+    "ip" : "121.214.243.111",
+    "ipv4" : "121.214.243.111",
+    "ipv6" : "121.214.243.111",
+    "difficulty" : {
+        "proof-of-work" : 0.77666509,
+        "proof-of-stake" : 0.00817296
+    },
+    "testnet" : false,
+    "keypoololdest" : 1523178499,
+    "keypoolsize" : 102,
+    "mininput" : 0.00000000,
+    "paytxfee" : 0.00010000,
+    "unlocked_until" : 1653717758,
+    "errors" : ""
+```
 
-  - Environment variables can be added to the `Dockerfile` to not require the need for RPC credentials each time a command is run outside the docker container.
-  - Environment variables could be added to override `magi.conf` file configuration on `magid` start without editing the file. Need a fresh container to have a ENV value change take effect, therefore may not be preferred if frequent changes are needed.
-  - Other OS's such as Windows uses different bind mount volume syntax however all Linux instructions are valid for Windows use or other.
-  - Magid could be run in daemon mode to give flexibility when attaching to container.
+***Known Issues***
+
+   - When `docker exec` commands are issued to the `magi` or `magi-daemon` (docker-compose) container names, presently docker environment variables need to pass `magi.conf` each time a command is entered since this information is not passed to the container correctly. A fix of this would make use easier.
 
 
 Info
